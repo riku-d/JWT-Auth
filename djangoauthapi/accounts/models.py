@@ -1,34 +1,42 @@
 from django.db import models
 from django.db import models
 from django.contrib.auth.models import BaseUserManager, AbstractBaseUser
-
+from django.core.validators import RegexValidator
 #Custom user manager
 
 class UserManager(BaseUserManager):
-    def create_user(self, email, name, password=None, password2=None):
+    def create_user(self, email, name,number, username, password=None, password2=None):
         """
         Creates and saves a User with the given email, name and password.
         """
         if not email:
             raise ValueError('Users must have an email address')
+        if not number:
+            raise ValueError('Users must have a Phone number')
+        if not username:
+            raise ValueError('Users must have an username')
 
         user = self.model(
             email=self.normalize_email(email),
             name=name,
+            number=number,
+            username=username,
         )
 
         user.set_password(password)
         user.save(using=self._db)
         return user
 
-    def create_superuser(self, email,name, password=None):
+    def create_superuser(self, email,name,number,username,password=None):
         """
         Creates and saves a superuser with the given email,name and password.
         """
         user = self.create_user(
-            email,
-            password=password,
+            email=email,
             name=name,
+            number=number,
+            username=username,
+            password=password,
         )
         user.is_admin = True
         user.save(using=self._db)
@@ -45,6 +53,16 @@ class User(AbstractBaseUser):
         max_length=255,
         unique=True,
     )
+    phone_regex = RegexValidator(
+        regex=r'^\+?1?\d{9,15}$',
+        message="Phone number must be entered in the format: '+999999999'. Up to 15 digits allowed."
+    )
+    number = models.CharField(validators=[phone_regex], max_length=15,unique=True)
+
+    def __str__(self):
+        return self.number
+    #numbers = models.IntegerField()
+    username = models.CharField(max_length=100,unique=True)
     name = models.CharField(max_length=100)
     is_active = models.BooleanField(default=True)
     is_admin = models.BooleanField(default=False)
@@ -54,7 +72,7 @@ class User(AbstractBaseUser):
     objects = UserManager()
 
     USERNAME_FIELD = 'email'
-    REQUIRED_FIELDS = ['name']
+    REQUIRED_FIELDS = ['name','username','number']
 
     def __str__(self):
         return self.email
